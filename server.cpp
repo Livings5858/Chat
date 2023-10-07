@@ -8,6 +8,8 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 
+#include "common/chat_message.h"
+
 const int MAX_EVENTS = 10;
 const int PORT = 8080;
 
