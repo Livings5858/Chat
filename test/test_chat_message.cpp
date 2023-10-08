@@ -34,10 +34,10 @@ TEST(ChatMessageTest, MessageTypeHandling) {
 
     // Create a file name message
     ChatMessage fileMsg;
-    fileMsg.type = MSG_FILENAME;
+    fileMsg.type = MSG_FILEHEADER;
     fileMsg.from = "Alice";
     fileMsg.to = "Bob";
-    fileMsg.message = "document.txt";
+    fileMsg.message = "document.txt:12321";
 
     std::string serializedCmdMsg = SerializeChatMessage(cmdMsg);
     std::string serializedFileMsg = SerializeChatMessage(fileMsg);

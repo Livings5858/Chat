@@ -2,6 +2,7 @@
 #include "tcp_server.h"
 #include "tcp_client.h"
 #include "chat_message.h"
+#include "message_handler.h"
 
 class TCPConnectTest : public ::testing::Test {
 protected:
@@ -20,11 +21,8 @@ protected:
 
     static void OnRecvMessage(const std::string& message) {
         ChatMessage msg = DeserializeChatMessage(message);
-        std::cout << "OnRecvMessage:" << std::endl;
-        std::cout << "MessageType:" << msg.type << std::endl;
-        std::cout << "From:" << msg.from << std::endl;
-        std::cout << "To:" << msg.to << std::endl;
-        std::cout << "Message:" << msg.message << std::endl;
+        MessageHandler handler;
+        handler.HandleMessage(msg);
     }
 };
 
@@ -72,7 +70,7 @@ TEST_F(TCPConnectTest, SendMessageSuccess) {
     sleep(1);
 }
 
-// 测试连接到服务器后连接是否正常发送消息10次
+// 测试连接到服务器后正常发送消息10次
 TEST_F(TCPConnectTest, SendMessage10Success) {
     const char *SERVER_IP = "127.0.0.1";
     const int SERVER_PORT = 8080;
@@ -91,6 +89,101 @@ TEST_F(TCPConnectTest, SendMessage10Success) {
     }
 
     // sleep 1s ：保证最后一条消息被接收之后再关闭client
+    sleep(1);
+}
+
+// 测试服务端处理命令消息
+TEST_F(TCPConnectTest, TestCommandMessageHandling) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_COMMAND,
+        .from = "test",
+        .to = "server",
+        .message = "LOGIN"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+
+    sleep(1);
+}
+
+// 测试服务端处理文本消息
+TEST_F(TCPConnectTest, TestTextMessageHandling) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_TEXT,
+        .from = "test",
+        .to = "server",
+        .message = "hello world"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+
+    sleep(1);
+}
+
+// 测试服务端处理文件头消息
+TEST_F(TCPConnectTest, TestFileHeaderMessageHandling) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_FILEHEADER,
+        .from = "test",
+        .to = "server",
+        .message = "test.jpg:128"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+
+    sleep(1);
+}
+
+// 测试服务端处理文件主体消息
+TEST_F(TCPConnectTest, TestFileDataMessageHandling) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_FILEDATA,
+        .from = "test",
+        .to = "server",
+        .message = "1234561wedwndjahsgaygyagsdyag"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+
+    sleep(1);
+}
+
+// 测试服务端处理其他未定义消息
+TEST_F(TCPConnectTest, TestUnsupportedMessageHandling) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_MAX,
+        .from = "test",
+        .to = "server",
+        .message = "unsupport message"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+
     sleep(1);
 }
 

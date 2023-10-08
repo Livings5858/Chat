@@ -8,8 +8,7 @@
 enum MessageType {
     MSG_COMMAND,
     MSG_TEXT,
-    MSG_FILENAME,
-    MSG_FILELENGTH,
+    MSG_FILEHEADER,
     MSG_FILEDATA,
     MSG_MAX,
 };
