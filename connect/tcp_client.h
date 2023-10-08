@@ -11,17 +11,17 @@
 
 class TCPClient {
 public:
-    TCPClient(const char* server_ip, int server_port);
+    TCPClient(const char* serverIP, int serverPort);
     ~TCPClient();
     bool Initialize();
     void SendMessage();
     int SendMessage(std::string message);
 
 private:
-    const char* server_ip_;
-    int server_port_;
-    int clientSocket;
-    struct sockaddr_in serverAddr;
+    const char* serverIP_;
+    int serverPort_;
+    int clientSocket_;
+    struct sockaddr_in serverAddr_;
 };
 
 #endif

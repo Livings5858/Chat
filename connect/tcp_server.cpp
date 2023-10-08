@@ -14,66 +14,66 @@ const int MAX_EVENTS = 10;
 const int PORT = 8080;
 
 TCPServer::TCPServer() :
-    serverSocket(-1),
-    epollFd(-1),
-    stopRequested(false),
-    recvCallback(nullptr) {}
+    serverSocket_(-1),
+    epollFd_(-1),
+    stopRequested_(false),
+    recvCallback_(nullptr) {}
 
 TCPServer::TCPServer(RecvCallbackFunction callback) :
-    serverSocket(-1),
-    epollFd(-1),
-    stopRequested(false),
-    recvCallback(callback) {}
+    serverSocket_(-1),
+    epollFd_(-1),
+    stopRequested_(false),
+    recvCallback_(callback) {}
 
 TCPServer::~TCPServer() {
-    if (serverSocket != -1) {
-        close(serverSocket);
+    if (serverSocket_ != -1) {
+        close(serverSocket_);
     }
 }
 
 bool TCPServer::Initialize() {
     // 创建监听套接字
-    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSocket == -1) {
+    serverSocket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket_ == -1) {
         perror("创建套接字失败");
         return false;
     }
 
     // 设置服务器地址
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-    serverAddr.sin_port = htons(PORT);
+    serverAddr_.sin_family = AF_INET;
+    serverAddr_.sin_addr.s_addr = INADDR_ANY;
+    serverAddr_.sin_port = htons(PORT);
 
     // 绑定地址和端口
-    if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
+    if (bind(serverSocket_, (struct sockaddr *)&serverAddr_, sizeof(serverAddr_)) == -1) {
         perror("绑定失败");
-        close(serverSocket);
+        close(serverSocket_);
         return false;
     }
 
     // 开始监听
-    if (listen(serverSocket, 5) == -1) {
+    if (listen(serverSocket_, 5) == -1) {
         perror("监听失败");
-        close(serverSocket);
+        close(serverSocket_);
         return false;
     }
 
     // 创建 epoll 实例
-    epollFd = epoll_create(1);
-    if (epollFd == -1) {
+    epollFd_ = epoll_create(1);
+    if (epollFd_ == -1) {
         perror("创建 epoll 失败");
-        close(serverSocket);
+        close(serverSocket_);
         return false;
     }
 
     // 添加监听套接字到 epoll 实例
     struct epoll_event event;
     event.events = EPOLLIN;
-    event.data.fd = serverSocket;
-    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, serverSocket, &event) == -1) {
+    event.data.fd = serverSocket_;
+    if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, serverSocket_, &event) == -1) {
         perror("添加监听套接字到 epoll 失败");
-        close(serverSocket);
-        close(epollFd);
+        close(serverSocket_);
+        close(epollFd_);
         return false;
     }
 
@@ -83,16 +83,16 @@ bool TCPServer::Initialize() {
 }
 
 void TCPServer::Run() {
-    while (!stopRequested.load()) {
+    while (!stopRequested_.load()) {
         struct epoll_event events[MAX_EVENTS];
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, 3);
+        int numEvents = epoll_wait(epollFd_, events, MAX_EVENTS, 3);
         if (numEvents == -1) {
             perror("等待事件失败");
             break;
         }
 
         for (int i = 0; i < numEvents; ++i) {
-            if (events[i].data.fd == serverSocket) {
+            if (events[i].data.fd == serverSocket_) {
                 // 有新的连接请求
                 HandleNewConnection();
             } else {
@@ -106,7 +106,7 @@ void TCPServer::Run() {
 void TCPServer::HandleNewConnection() {
     struct sockaddr_in clientAddr;
     socklen_t clientAddrLen = sizeof(clientAddr);
-    int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientAddrLen);
+    int clientSocket = accept(serverSocket_, (struct sockaddr *)&clientAddr, &clientAddrLen);
     if (clientSocket == -1) {
         perror("接受连接失败");
         return;
@@ -116,7 +116,7 @@ void TCPServer::HandleNewConnection() {
     struct epoll_event event;
     event.events = EPOLLIN;
     event.data.fd = clientSocket;
-    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, clientSocket, &event) == -1) {
+    if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, clientSocket, &event) == -1) {
         perror("添加客户端套接字到 epoll 失败");
         close(clientSocket);
     }
@@ -140,35 +140,35 @@ void TCPServer::HandleClientData(int clientSocket) {
     }
 
     if (bytesRead <= 0) {
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientSocket, NULL);
+        epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
         close(clientSocket);
         std::cout << "客户端断开连接" << std::endl;
         return;
     }
 
-    if (recvCallback) {
-        recvCallback(message);
+    if (recvCallback_) {
+        recvCallback_(message);
     }
 }
 
 bool TCPServer::Start() {
-    stopRequested.store(false);
+    stopRequested_.store(false);
     if (!Initialize()) {
         return false;
     }
-    serverThread = std::thread(&TCPServer::Run, this);
+    serverThread_ = std::thread(&TCPServer::Run, this);
 
     return true;
 }
 
 void TCPServer::Stop() {
-    stopRequested.store(true); // 设置标志变量以请求线程停止
-    if (serverThread.joinable()) {
-        serverThread.join();
+    stopRequested_.store(true); // 设置标志变量以请求线程停止
+    if (serverThread_.joinable()) {
+        serverThread_.join();
     }
     std::cout << "server stoping..." << std::endl;
 }
 
 void TCPServer::SetCallback(RecvCallbackFunction callback) {
-    recvCallback = callback;
+    recvCallback_ = callback;
 }

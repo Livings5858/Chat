@@ -5,17 +5,17 @@
 
 class TCPConnectTest : public ::testing::Test {
 protected:
-    static TCPServer server;
+    static TCPServer server_;
 
     static void SetUpTestSuite() {
-        server.SetCallback(OnRecvMessage);
-        if (server.Start()) {
+        server_.SetCallback(OnRecvMessage);
+        if (server_.Start()) {
             std::cout << "test tcp server starting..." << std::endl;
         }
     }
 
     static void TearDownTestSuite() {
-        server.Stop();
+        server_.Stop();
     }
 
     static void OnRecvMessage(const std::string& message) {
@@ -94,7 +94,7 @@ TEST_F(TCPConnectTest, SendMessage10Success) {
     sleep(1);
 }
 
-TCPServer TCPConnectTest::server;
+TCPServer TCPConnectTest::server_;
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

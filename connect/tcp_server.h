@@ -31,12 +31,12 @@ private:
     void HandleClientData(int clientSocket);
 
 private:
-    int serverSocket;
-    struct sockaddr_in serverAddr;
-    int epollFd;
-    std::atomic<bool> stopRequested;
-    std::thread serverThread;
-    RecvCallbackFunction recvCallback;
+    int serverSocket_;
+    struct sockaddr_in serverAddr_;
+    int epollFd_;
+    std::atomic<bool> stopRequested_;
+    std::thread serverThread_;
+    RecvCallbackFunction recvCallback_;
 };
 
 #endif
