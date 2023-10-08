@@ -3,8 +3,8 @@
 
 int main() {
     TCPServer server;
-    if (server.Initialize()) {
-        server.Run();
+    if (server.Start()) {
+        while(true);
     }
 
     return 0;

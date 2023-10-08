@@ -13,7 +13,10 @@
 const int MAX_EVENTS = 10;
 const int PORT = 8080;
 
-TCPServer::TCPServer() : serverSocket(-1), epollFd(-1) {}
+TCPServer::TCPServer() :
+    serverSocket(-1),
+    epollFd(-1),
+    stopRequested(false) {}
 
 TCPServer::~TCPServer() {
     if (serverSocket != -1) {
@@ -73,9 +76,9 @@ bool TCPServer::Initialize() {
 }
 
 void TCPServer::Run() {
-    while (true) {
+    while (!stopRequested.load()) {
         struct epoll_event events[MAX_EVENTS];
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, 3);
         if (numEvents == -1) {
             perror("等待事件失败");
             break;
@@ -130,3 +133,19 @@ void TCPServer::HandleClientData(int clientSocket) {
     }
 }
 
+bool TCPServer::Start() {
+    if (!Initialize()) {
+        return false;
+    }
+    serverThread = std::thread(&TCPServer::Run, this);
+
+    return true;
+}
+
+void TCPServer::Stop() {
+    stopRequested.store(true); // 设置标志变量以请求线程停止
+    if (serverThread.joinable()) {
+        serverThread.join();
+    }
+    std::cout << "server stoping..." << std::endl;
+}

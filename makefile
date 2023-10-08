@@ -16,7 +16,7 @@ test.o: test/test.cpp
 	$(CXX) $(CXXFLAGS) -Icommon -c test/test.cpp -o out/test.o
 
 tcp_server.o: connect/tcp_server.cpp
-	$(CXX) $(CXXFLAGS) -Icommon -c connect/tcp_server.cpp -o out/tcp_server.o
+	$(CXX) $(CXXFLAGS) -Icommon -c connect/tcp_server.cpp -o out/tcp_server.o -pthread
 
 tcp_client.o: connect/tcp_client.cpp
 	$(CXX) $(CXXFLAGS) -Icommon -c connect/tcp_client.cpp -o out/tcp_client.o
