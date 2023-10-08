@@ -1,7 +1,10 @@
 CXX = g++
 CXXFLAGS = -std=c++14 -Wall
 
-all: client server test_chat_message test_tcp_connect
+all: create_out_directory client server test_chat_message test_tcp_connect
+
+create_out_directory:
+	mkdir -p out
 
 client: client.cpp tcp_client.o chat_message.o
 	$(CXX) $(CXXFLAGS) -o out/clinet client.cpp out/chat_message.o out/tcp_client.o -Iconnect -Icommon
@@ -48,4 +51,4 @@ message_handler.o: message_handling/message_handler.cpp
 clean:
 	rm out/*
 
-.PHONY: all clean test_chat_message test_tcp_connect
+.PHONY: all create_out_directory clean test_chat_message test_tcp_connect
