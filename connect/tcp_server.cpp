@@ -16,7 +16,14 @@ const int PORT = 8080;
 TCPServer::TCPServer() :
     serverSocket(-1),
     epollFd(-1),
-    stopRequested(false) {}
+    stopRequested(false),
+    recvCallback(nullptr) {}
+
+TCPServer::TCPServer(RecvCallbackFunction callback) :
+    serverSocket(-1),
+    epollFd(-1),
+    stopRequested(false),
+    recvCallback(callback) {}
 
 TCPServer::~TCPServer() {
     if (serverSocket != -1) {
@@ -119,17 +126,28 @@ void TCPServer::HandleNewConnection() {
 }
 
 void TCPServer::HandleClientData(int clientSocket) {
-    char buffer[1024];
-    int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+    size_t message_len = 0;
+    std::string message;
+
+    // 接收消息大小
+    int bytesRead = recv(clientSocket, &message_len, sizeof(message_len), 0);
+    if (bytesRead > 0) {
+        char* buffer = new char[message_len + 1];
+        bytesRead = recv(clientSocket, buffer, message_len, 0);
+        buffer[message_len] = '\0';
+        message = buffer;
+        delete buffer;
+    }
+
     if (bytesRead <= 0) {
-        // 客户端关闭连接
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientSocket, NULL);
         close(clientSocket);
         std::cout << "客户端断开连接" << std::endl;
-    } else {
-        // 处理接收到的消息
-        buffer[bytesRead] = '\0';
-        std::cout << "收到消息: " << buffer << std::endl;
+        return;
+    }
+
+    if (recvCallback) {
+        recvCallback(message);
     }
 }
 
@@ -149,4 +167,8 @@ void TCPServer::Stop() {
         serverThread.join();
     }
     std::cout << "server stoping..." << std::endl;
+}
+
+void TCPServer::SetCallback(RecvCallbackFunction callback) {
+    recvCallback = callback;
 }

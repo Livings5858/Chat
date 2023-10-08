@@ -60,8 +60,16 @@ void TCPClient::SendMessage() {
 }
 
 int TCPClient::SendMessage(std::string message) {
+    size_t message_len = message.length();
+    if (message_len == 0) {
+        return 0;
+    }
+    if (send(clientSocket, &message_len, sizeof(message_len), 0) == -1) {
+        perror("发送消息长度失败");
+        return errno;
+    }
     if (send(clientSocket, message.c_str(), message.length(), 0) == -1) {
-        perror("发送消息失败");
+        perror("发送消息内容失败");
         return errno;
     }
 

@@ -13,13 +13,16 @@
 #include <atomic>
 #include <thread>
 
+typedef void (*RecvCallbackFunction)(const std::string&);
 
 class TCPServer {
 public:
     TCPServer();
+    TCPServer(RecvCallbackFunction callback);
     ~TCPServer();
     bool Start();
     void Stop();
+    void SetCallback(RecvCallbackFunction callback);
 
 private:
     bool Initialize();
@@ -33,6 +36,7 @@ private:
     int epollFd;
     std::atomic<bool> stopRequested;
     std::thread serverThread;
+    RecvCallbackFunction recvCallback;
 };
 
 #endif
