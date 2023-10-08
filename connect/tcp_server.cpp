@@ -134,6 +134,7 @@ void TCPServer::HandleClientData(int clientSocket) {
 }
 
 bool TCPServer::Start() {
+    stopRequested.store(false);
     if (!Initialize()) {
         return false;
     }

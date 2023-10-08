@@ -58,3 +58,12 @@ void TCPClient::SendMessage() {
         }
     }
 }
+
+int TCPClient::SendMessage(std::string message) {
+    if (send(clientSocket, message.c_str(), message.length(), 0) == -1) {
+        perror("发送消息失败");
+        return errno;
+    }
+
+    return 0;
+}

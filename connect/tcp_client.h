@@ -15,6 +15,7 @@ public:
     ~TCPClient();
     bool Initialize();
     void SendMessage();
+    int SendMessage(std::string message);
 
 private:
     const char* server_ip_;
