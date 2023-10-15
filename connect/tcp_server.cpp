@@ -147,7 +147,7 @@ void TCPServer::HandleClientData(int clientSocket) {
     }
 
     if (recvCallback_) {
-        recvCallback_(message);
+        recvCallback_(clientSocket, message);
     }
 }
 

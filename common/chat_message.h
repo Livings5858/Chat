@@ -10,6 +10,11 @@ enum MessageType {
     MSG_TEXT,
     MSG_FILEHEADER,
     MSG_FILEDATA,
+    MSG_LOGIN,
+    MSG_LOGOUT,
+    MSG_REGISTER,
+    MSG_UNREGISTER,
+    MSG_FORGOT_PASSWORD,
     MSG_MAX,
 };
 

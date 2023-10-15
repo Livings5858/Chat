@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <thread>
+#include <atomic>
 
 class TCPClient {
 public:
@@ -18,10 +20,13 @@ public:
     int SendMessage(std::string message);
 
 private:
+    void OnRecvMessage();
     const char* serverIP_;
     int serverPort_;
     int clientSocket_;
     struct sockaddr_in serverAddr_;
+    std::atomic<bool> stopRequested_;
+    std::thread clientThread_;
 };
 
 #endif

@@ -2,7 +2,8 @@
 #include "tcp_server.h"
 #include "tcp_client.h"
 #include "chat_message.h"
-#include "message_handler.h"
+#include "server_message_handler.h"
+#include "client_message_handler.h"
 
 class TCPConnectTest : public ::testing::Test {
 protected:
@@ -19,10 +20,10 @@ protected:
         server_.Stop();
     }
 
-    static void OnRecvMessage(const std::string& message) {
+    static void OnRecvMessage(int clientSocket, const std::string& message) {
         ChatMessage msg = DeserializeChatMessage(message);
-        MessageHandler handler;
-        handler.HandleMessage(msg);
+        ServerMessageHandler handler;
+        handler.HandleMessage(clientSocket, msg);
     }
 };
 
@@ -184,6 +185,24 @@ TEST_F(TCPConnectTest, TestUnsupportedMessageHandling) {
     int ret = client.SendMessage(SerializeChatMessage(msg));
     EXPECT_EQ(ret, 0);
 
+    sleep(1);
+}
+
+// 测试登录
+TEST_F(TCPConnectTest, TestLogin) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    TCPClient client(SERVER_IP, SERVER_PORT);
+    ASSERT_TRUE(client.Initialize());
+
+    ChatMessage msg {
+        .type = MSG_LOGIN,
+        .from = "username",
+        .to = "server",
+        .message = "password"
+    };
+    int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
     sleep(1);
 }
 

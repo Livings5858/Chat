@@ -13,7 +13,7 @@
 #include <atomic>
 #include <thread>
 
-typedef void (*RecvCallbackFunction)(const std::string&);
+typedef void (*RecvCallbackFunction)(int, const std::string&);
 
 class TCPServer {
 public:
