@@ -15,12 +15,13 @@ client: client.cpp tcp_client.o chat_message.o client_message_handler.o
 	-Iconnect \
 	-Icommon
 
-server: server.cpp tcp_server.o chat_message.o server_message_handler.o
+server: server.cpp tcp_server.o chat_message.o server_message_handler.o logger.o
 	$(CXX) $(CXXFLAGS) -o out/server \
 	server.cpp \
 	out/chat_message.o \
 	out/tcp_server.o \
 	out/server_message_handler.o \
+	out/logger.o \
 	-Iconnect \
 	-Icommon \
 	-Imessage_handling
@@ -29,7 +30,7 @@ test_chat_message: test_chat_message.o chat_message.o
 	$(CXX) $(CXXFLAGS) -o out/test_chat_message out/test_chat_message.o out/chat_message.o -lgtest -lgtest_main -pthread
 
 test_tcp_connect: test_tcp_connect.o tcp_server.o tcp_client.o \
-	chat_message.o server_message_handler.o client_message_handler.o
+	chat_message.o server_message_handler.o client_message_handler.o logger.o
 	$(CXX) $(CXXFLAGS) -o out/test_tcp_connect \
 	out/test_tcp_connect.o \
 	out/tcp_server.o \
@@ -37,6 +38,7 @@ test_tcp_connect: test_tcp_connect.o tcp_server.o tcp_client.o \
 	out/chat_message.o \
 	out/server_message_handler.o \
 	out/client_message_handler.o \
+	out/logger.o \
 	-lgtest -lgtest_main -pthread
 
 test_log: test/test_log.cpp logger.o
@@ -62,6 +64,7 @@ tcp_server.o: connect/tcp_server.cpp
 	$(CXX) $(CXXFLAGS) \
 	-Icommon \
 	-Imessage_handling \
+	-Iutils \
 	-c connect/tcp_server.cpp -o out/tcp_server.o -pthread
 
 tcp_client.o: connect/tcp_client.cpp
@@ -77,6 +80,7 @@ server_message_handler.o: message_handling/server_message_handler.cpp
 	$(CXX) $(CXXFLAGS) \
 	-Icommon \
 	-Imessage_handling \
+	-Iutils \
 	-c message_handling/server_message_handler.cpp \
 	-o out/server_message_handler.o
 

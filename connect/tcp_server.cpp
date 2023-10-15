@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include "tcp_server.h"
 #include "chat_message.h"
+#include "logger.h"
 
 const int MAX_EVENTS = 10;
 const int PORT = 8080;
@@ -35,7 +36,7 @@ bool TCPServer::Initialize() {
     // 创建监听套接字
     serverSocket_ = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket_ == -1) {
-        perror("创建套接字失败");
+        LOGE("Create socket failed: %s", strerror(errno));
         return false;
     }
 
@@ -46,14 +47,14 @@ bool TCPServer::Initialize() {
 
     // 绑定地址和端口
     if (bind(serverSocket_, (struct sockaddr *)&serverAddr_, sizeof(serverAddr_)) == -1) {
-        perror("绑定失败");
+        LOGE("Bind failed: %s", strerror(errno));
         close(serverSocket_);
         return false;
     }
 
     // 开始监听
     if (listen(serverSocket_, 5) == -1) {
-        perror("监听失败");
+        LOGE("Listen Failed: %s", strerror(errno));
         close(serverSocket_);
         return false;
     }
@@ -61,7 +62,7 @@ bool TCPServer::Initialize() {
     // 创建 epoll 实例
     epollFd_ = epoll_create(1);
     if (epollFd_ == -1) {
-        perror("创建 epoll 失败");
+        LOGE("Create epoll failed: %s", strerror(errno));
         close(serverSocket_);
         return false;
     }
@@ -71,13 +72,13 @@ bool TCPServer::Initialize() {
     event.events = EPOLLIN;
     event.data.fd = serverSocket_;
     if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, serverSocket_, &event) == -1) {
-        perror("添加监听套接字到 epoll 失败");
+        LOGE("Add server socket event for epoll failed: %s", strerror(errno));
         close(serverSocket_);
         close(epollFd_);
         return false;
     }
 
-    std::cout << "等待客户端连接..." << std::endl;
+    LOGI("Waitting for client...");
 
     return true;
 }
@@ -87,7 +88,7 @@ void TCPServer::Run() {
         struct epoll_event events[MAX_EVENTS];
         int numEvents = epoll_wait(epollFd_, events, MAX_EVENTS, 3);
         if (numEvents == -1) {
-            perror("等待事件失败");
+            LOGE("Waitting event for epoll failed: %s", strerror(errno));
             break;
         }
 
@@ -108,7 +109,7 @@ void TCPServer::HandleNewConnection() {
     socklen_t clientAddrLen = sizeof(clientAddr);
     int clientSocket = accept(serverSocket_, (struct sockaddr *)&clientAddr, &clientAddrLen);
     if (clientSocket == -1) {
-        perror("接受连接失败");
+        LOGE("Accept failed: %s", strerror(errno));
         return;
     }
 
@@ -117,12 +118,12 @@ void TCPServer::HandleNewConnection() {
     event.events = EPOLLIN;
     event.data.fd = clientSocket;
     if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, clientSocket, &event) == -1) {
-        perror("添加客户端套接字到 epoll 失败");
+        LOGE("Add client socket event for epoll failed: %s", strerror(errno));
         close(clientSocket);
     }
 
-    std::cout << "客户端 " << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port)
-                << " 连接成功" << std::endl;
+    LOGI("Client [%d] %s:%d connected.", clientSocket, inet_ntoa(clientAddr.sin_addr),
+        ntohs(clientAddr.sin_port));
 }
 
 void TCPServer::HandleClientData(int clientSocket) {
@@ -142,7 +143,7 @@ void TCPServer::HandleClientData(int clientSocket) {
     if (bytesRead <= 0) {
         epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
         close(clientSocket);
-        std::cout << "客户端断开连接" << std::endl;
+        LOGI("Client [%d] disconnected.", clientSocket);
         return;
     }
 
@@ -166,7 +167,7 @@ void TCPServer::Stop() {
     if (serverThread_.joinable()) {
         serverThread_.join();
     }
-    std::cout << "server stoping..." << std::endl;
+    LOGI("server stoping...");
 }
 
 void TCPServer::SetCallback(RecvCallbackFunction callback) {
