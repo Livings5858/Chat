@@ -5,8 +5,12 @@
 #include <fstream>
 #include <string>
 #include <cstdarg>
+#include <chrono>
+#include <thread>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <ctime>
 
-// 日志级别
 enum class LogLevel {
     VERBOSE,
     DEBUG,
@@ -17,34 +21,34 @@ enum class LogLevel {
 
 class Logger {
 public:
-    // 获取日志单例
     static Logger& GetInstance();
 
-    // 设置日志级别
     void SetLogLevel(LogLevel level);
 
-    // 记录日志
     void Log(LogLevel level, const char* format, ...);
-
 private:
     Logger();
-
-    // 日志级别字符串映射
-    const char* LogLevelStr[5] = {
-        "VERBOSE",
-        "DEBUG",
-        "WARNING",
-        "INFO",
-        "ERROR"
-    };
 
     LogLevel logLevel = LogLevel::INFO;
     std::ostream* outputStream;
     std::ofstream logFile;
-    std::string logFileName = "log.txt"; // 可以根据需要更改日志文件名
+    std::string logFileName = "log.txt";
 };
 
-#define LOG(level, format, ...) Logger::GetInstance().Log(level, format, ##__VA_ARGS__)
+#define LOG_LEVEL_STR(level) \
+    (level == LogLevel::VERBOSE ? "VERBOSE" : \
+     level == LogLevel::DEBUG ? "DEBUG" : \
+     level == LogLevel::WARNING ? "WARNING" : \
+     level == LogLevel::INFO ? "INFO" : \
+     level == LogLevel::ERROR ? "ERROR" : "UNKNOWN")
+
+#define GETTID() syscall(SYS_gettid)
+#define GETPID() getpid()
+#define LOG(level, format, ...) \
+    Logger::GetInstance().Log(level, "%s %d %d [%s] %s:%d " \
+    format, __TIME__, GETPID(), GETTID(), LOG_LEVEL_STR(level), \
+    __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
 
 #define LOGV(format, ...) LOG(LogLevel::VERBOSE, format, ##__VA_ARGS__)
 #define LOGD(format, ...) LOG(LogLevel::DEBUG, format, ##__VA_ARGS__)
