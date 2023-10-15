@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++14 -Wall
 
-all: create_out_directory client server test_chat_message test_tcp_connect
+all: create_out_directory client server test_chat_message test_tcp_connect test_log
 
 create_out_directory:
 	mkdir -p out
@@ -37,6 +37,13 @@ test_tcp_connect: test_tcp_connect.o tcp_server.o tcp_client.o \
 	out/chat_message.o \
 	out/server_message_handler.o \
 	out/client_message_handler.o \
+	-lgtest -lgtest_main -pthread
+
+test_log: test/test_log.cpp logger.o
+	$(CXX) $(CXXFLAGS) -o out/test_log \
+	-Iutils \
+	test/test_log.cpp \
+	out/logger.o \
 	-lgtest -lgtest_main -pthread
 
 test_chat_message.o: test/test_chat_message.cpp
@@ -80,7 +87,13 @@ client_message_handler.o: message_handling/client_message_handler.cpp
 	-c message_handling/client_message_handler.cpp \
 	-o out/client_message_handler.o
 
+logger.o : utils/logger.cpp
+	$(CXX) $(CXXFLAGS) \
+	-Iutils \
+	-c utils/logger.cpp \
+	-o out/logger.o
+
 clean:
 	rm out/*
 
-.PHONY: all create_out_directory clean test_chat_message test_tcp_connect
+.PHONY: all create_out_directory clean test_chat_message test_tcp_connect test_log
