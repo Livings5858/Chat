@@ -4,6 +4,8 @@
 #include "server_message_handler.h"
 #include "logger.h"
 
+std::map<std::string, int> ServerMessageHandler::onlineMap_;
+
 void ServerMessageHandler::HandleCommandMessage(int clientSocket, const ChatMessage& msg) {
 
 }
@@ -26,18 +28,50 @@ void ServerMessageHandler::HandleLoginMessage(int clientSocket, const ChatMessag
         .from = "server",
         .to = msg.from,
     };
-    if (msg.from == "username" && msg.message == "password") {
-        LOGI("Login sucessful %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
-        replayMsg.message = "OK";
-    } else {
-        LOGI("Login failed %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
-        replayMsg.message = "Error:Please check username and password";
+
+    // Generate Fake User List
+    std::map<std::string, std::string> usermap;
+    std::string username = "test";
+    std::string password = "password";
+    for (int i = 0; i < 10; i++) {
+        usermap[username + std::to_string(i)] = password;
     }
+
+    bool loginOK = false;
+    auto it = usermap.find(msg.from);
+    if (it != usermap.end()) {
+        if (it->second == msg.message) {
+            LOGI("Login sucessful %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
+            loginOK = true;
+        } else {
+            LOGI("Login failed %s (ClientSocket: %d), incorrect password.",
+                msg.from.c_str(), clientSocket);
+        }
+    } else {
+        LOGI("Login failed %s (ClientSocket: %d), username not found.",
+            msg.from.c_str(), clientSocket);
+    }
+
+    if (loginOK) {
+        LOGI("Login map add %s : %d", msg.from.c_str(), clientSocket);
+        onlineMap_[msg.from] = clientSocket;
+    }
+    replayMsg.message = loginOK ? "OK" : "Error:Please check username and password";
     SendMessage(clientSocket, replayMsg);
 }
 
 void ServerMessageHandler::HandleLogoutMessage(int clientSocket, const ChatMessage& msg) {
-
+    auto it = onlineMap_.find(msg.from);
+    if (it != onlineMap_.end()) {
+        if (it->second == clientSocket) {
+            eraseFromOnlineMap(msg.from);
+        } else {
+            LOGE("Log out failed, clientSocket [%d/%d] not matched (username: %s)",
+                clientSocket, it->second, msg.from.c_str());
+        }
+    } else {
+        LOGE("Log out failed, username [%s] not found", msg.from.c_str());
+    }
 }
 
 void ServerMessageHandler::HandleRegisterMessage(int clientSocket, const ChatMessage& msg) {
@@ -97,10 +131,20 @@ void ServerMessageHandler::SendMessage(int clientSocket, const ChatMessage& msg)
     }
     if (send(clientSocket, &message_len, sizeof(message_len), 0) == -1) {
         LOGE("Send message length failed (ClientSocket: %d)", clientSocket);
+        eraseFromOnlineMap(msg.to);
         return;
     }
     if (send(clientSocket, message.c_str(), message.length(), 0) == -1) {
         LOGE("Send message content failed (ClientSocket: %d)", clientSocket);
+        eraseFromOnlineMap(msg.to);
         return;
+    }
+}
+
+void ServerMessageHandler::eraseFromOnlineMap(std::string username) {
+    auto it = onlineMap_.find(username);
+    if (it != onlineMap_.end()) {
+        onlineMap_.erase(it);
+        LOGI("User log out: %s", username.c_str());
     }
 }

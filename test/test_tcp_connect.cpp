@@ -197,11 +197,15 @@ TEST_F(TCPConnectTest, TestLogin) {
 
     ChatMessage msg {
         .type = MSG_LOGIN,
-        .from = "username",
+        .from = "test0",
         .to = "server",
         .message = "password"
     };
     int ret = client.SendMessage(SerializeChatMessage(msg));
+    EXPECT_EQ(ret, 0);
+    sleep(1);
+    msg.type = MSG_LOGOUT;
+    ret = client.SendMessage(SerializeChatMessage(msg));
     EXPECT_EQ(ret, 0);
     sleep(1);
 }

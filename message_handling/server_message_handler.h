@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 #include "chat_message.h"
 
 class ServerMessageHandler {
@@ -20,6 +21,8 @@ public:
     void HandleMessage(int clientSocket, const ChatMessage& msg);
 private:
     void SendMessage(int clientSocket, const ChatMessage& msg);
+    void eraseFromOnlineMap(std::string username);
+    static std::map<std::string, int> onlineMap_;
 };
 
 #endif // SERVER_MESSAGE_HANDLER_H
