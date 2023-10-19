@@ -11,7 +11,18 @@ void ServerMessageHandler::HandleCommandMessage(int clientSocket, const ChatMess
 }
 
 void ServerMessageHandler::HandleTextMessage(int clientSocket, const ChatMessage& msg) {
-
+    auto it = onlineMap_.find(msg.from);
+    if (it != onlineMap_.end() && it->second == clientSocket) {
+        auto to_it = onlineMap_.find(msg.to);
+        if (to_it != onlineMap_.end()) {
+            LOGD("From:%s To:%s Msg:%s", msg.from.c_str(), msg.to.c_str(), msg.message.c_str());
+            SendMessage(to_it->second, msg);
+        } else {
+            LOGE("Send to user %s does not log in or is not exited.", msg.to.c_str());
+        }
+    } else {
+        LOGE("Send from user %s does not log in or is not matched.", msg.from.c_str());
+    }
 }
 
 void ServerMessageHandler::HandleFileHeaderMessage(int clientSocket, const ChatMessage& msg) {
@@ -41,19 +52,19 @@ void ServerMessageHandler::HandleLoginMessage(int clientSocket, const ChatMessag
     auto it = usermap.find(msg.from);
     if (it != usermap.end()) {
         if (it->second == msg.message) {
-            LOGI("Login sucessful %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
+            LOGD("Login sucessful %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
             loginOK = true;
         } else {
-            LOGI("Login failed %s (ClientSocket: %d), incorrect password.",
+            LOGW("Login failed %s (ClientSocket: %d), incorrect password.",
                 msg.from.c_str(), clientSocket);
         }
     } else {
-        LOGI("Login failed %s (ClientSocket: %d), username not found.",
+        LOGW("Login failed %s (ClientSocket: %d), username not found.",
             msg.from.c_str(), clientSocket);
     }
 
     if (loginOK) {
-        LOGI("Login map add %s : %d", msg.from.c_str(), clientSocket);
+        LOGD("Login map add %s : %d", msg.from.c_str(), clientSocket);
         onlineMap_[msg.from] = clientSocket;
     }
     replayMsg.message = loginOK ? "OK" : "Error:Please check username and password";
@@ -87,7 +98,7 @@ void ServerMessageHandler::HandleForgotPasswordMessage(int clientSocket, const C
 }
 
 void ServerMessageHandler::HandleMessage(int clientSocket, const ChatMessage& msg) {
-    LOGI("Received msg[%d] from %s to %s (ClientSocket: %d): %s",
+    LOGD("Received msg[%d] from %s to %s (ClientSocket: %d): %s",
         msg.type, msg.from.c_str(), msg.to.c_str(), clientSocket, msg.message.c_str());
     switch (msg.type) {
         case MessageType::MSG_COMMAND:
@@ -145,6 +156,6 @@ void ServerMessageHandler::eraseFromOnlineMap(std::string username) {
     auto it = onlineMap_.find(username);
     if (it != onlineMap_.end()) {
         onlineMap_.erase(it);
-        LOGI("User log out: %s", username.c_str());
+        LOGD("User log out: %s", username.c_str());
     }
 }

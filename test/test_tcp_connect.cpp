@@ -210,6 +210,97 @@ TEST_F(TCPConnectTest, TestLogin) {
     sleep(1);
 }
 
+// 测试10个用户同时登录
+TEST_F(TCPConnectTest, TestLogin10User) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    std::vector<std::thread> threads;
+    const int numUsers = 10;
+
+    for (int i = 0; i < numUsers; ++i) {
+        threads.emplace_back([i, SERVER_IP, SERVER_PORT] {
+            TCPClient client(SERVER_IP, SERVER_PORT);
+            ASSERT_TRUE(client.Initialize());
+            std::string username = "test" + std::to_string(i);
+
+            ChatMessage msg {
+                .type = MSG_LOGIN,
+                .from = username,
+                .to = "server",
+                .message = "password"
+            };
+            int ret = client.SendMessage(SerializeChatMessage(msg));
+            EXPECT_EQ(ret, 0);
+
+            // Sleep for some time to allow the user to login
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            msg.type = MSG_LOGOUT;
+            ret = client.SendMessage(SerializeChatMessage(msg));
+            EXPECT_EQ(ret, 0);
+            // Sleep for some time to allow the user to logout
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
+
+// 测试10个用户相互发消息
+TEST_F(TCPConnectTest, Test10UserChat) {
+    const char *SERVER_IP = "127.0.0.1";
+    const int SERVER_PORT = 8080;
+    std::vector<std::thread> threads;
+    const int numUsers = 10;
+
+    for (int i = 0; i < numUsers; ++i) {
+        threads.emplace_back([i, SERVER_IP, SERVER_PORT] {
+            TCPClient client(SERVER_IP, SERVER_PORT);
+            ASSERT_TRUE(client.Initialize());
+            std::string username = "test" + std::to_string(i);
+            ChatMessage msg {
+                .type = MSG_LOGIN,
+                .from = username,
+                .to = "server",
+                .message = "password"
+            };
+            int ret = client.SendMessage(SerializeChatMessage(msg));
+            EXPECT_EQ(ret, 0);
+
+            // wait for others log in
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            std::string fromUser = username;
+            std::string toUser = "test" + std::to_string((i + 1) % numUsers);
+            std::string message = "Hello " + toUser + ", I am " + fromUser + ".";
+            ChatMessage textmsg {
+                .type = MSG_TEXT,
+                .from = fromUser,
+                .to = toUser,
+                .message = message
+            };
+            ret = client.SendMessage(SerializeChatMessage(textmsg));
+            EXPECT_EQ(ret, 0);
+
+            // Sleep for some time to allow the others to chat
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            msg.type = MSG_LOGOUT;
+            ret = client.SendMessage(SerializeChatMessage(msg));
+            EXPECT_EQ(ret, 0);
+
+            // Sleep for some time to allow the user to logout
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+}
+
 TCPServer TCPConnectTest::server_;
 
 int main(int argc, char** argv) {

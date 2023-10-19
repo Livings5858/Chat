@@ -32,7 +32,7 @@ private:
     LogLevel logLevel = LogLevel::INFO;
     std::ostream* outputStream;
     std::ofstream logFile;
-    std::string logFileName = "log.txt";
+    std::string logFileName = "chat.log";
 };
 
 #define LOG_LEVEL_STR(level) \
