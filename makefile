@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++14 -Wall \
-	-D__FILENAME__=\"$(basename $(notdir $<))\"
+	-D__FILENAME__=\"$(notdir $<)\"
 
 all: create_out_directory client server test_chat_message test_tcp_connect test_log
 
