@@ -5,15 +5,16 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <thread>
 #include "tcp_client.h"
 #include "client_message_handler.h"
-#include <thread>
+#include "logger.h"
 
 TCPClient::TCPClient(const char* serverIP, int serverPort) :
     serverIP_(serverIP), serverPort_(serverPort), clientSocket_(-1), stopRequested_(false) {}
 
 TCPClient::~TCPClient() {
-    std::cout << "client stoping..." << std::endl;
+    LOGI("client stoping...");
     stopRequested_.store(true);
     if (clientThread_.joinable()) {
         clientThread_.join();
@@ -27,7 +28,7 @@ bool TCPClient::Initialize() {
     // 创建客户端套接字
     clientSocket_ = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket_ == -1) {
-        perror("创建套接字失败");
+        LOGE("Create socket failed: %s", strerror(errno));
         return false;
     }
 
@@ -36,7 +37,9 @@ bool TCPClient::Initialize() {
     timeout.tv_usec = 0;
 
     if (setsockopt(clientSocket_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        perror("setsockopt");
+        LOGE("setsockopt failed: %s", strerror(errno));
+        close(clientSocket_);
+        return false;
     }
 
     // 设置服务器地址
@@ -44,38 +47,24 @@ bool TCPClient::Initialize() {
     serverAddr_.sin_port = htons(serverPort_);
 
     if (inet_pton(AF_INET, serverIP_, &serverAddr_.sin_addr) <= 0) {
-        perror("设置服务器地址失败");
+        LOGE("Set server addresss failed: %s", strerror(errno));
         close(clientSocket_);
         return false;
     }
 
     // 连接到服务器
     if (connect(clientSocket_, (struct sockaddr *)&serverAddr_, sizeof(serverAddr_)) == -1) {
-        perror("连接到服务器失败");
+        LOGE("Connect to server failed: %s", strerror(errno));
         close(clientSocket_);
         return false;
     }
 
-    std::cout << "已连接到服务器" << std::endl;
+    LOGI("Connect to server successfully, clientSocket:%d", clientSocket_);
     stopRequested_.store(false);
     clientThread_ = std::thread(&TCPClient::OnRecvMessage, this);
-    std::cout << "开启消息接收线程" << std::endl;
+    LOGI("Start message handler thread");
 
     return true;
-}
-
-void TCPClient::SendMessage() {
-    char message[1024];
-
-    while (true) {
-        std::cout << "请输入消息: ";
-        std::cin.getline(message, sizeof(message));
-
-        if (send(clientSocket_, message, strlen(message), 0) == -1) {
-            perror("发送消息失败");
-            break;
-        }
-    }
 }
 
 int TCPClient::SendMessage(std::string message) {
@@ -84,11 +73,11 @@ int TCPClient::SendMessage(std::string message) {
         return 0;
     }
     if (send(clientSocket_, &message_len, sizeof(message_len), 0) == -1) {
-        perror("发送消息长度失败");
+        LOGE("Send message length failed (ClientSocket: %d)", clientSocket_);
         return errno;
     }
     if (send(clientSocket_, message.c_str(), message.length(), 0) == -1) {
-        perror("发送消息内容失败");
+        LOGE("Send message content failed (ClientSocket: %d)", clientSocket_);
         return errno;
     }
 
@@ -112,8 +101,8 @@ void TCPClient::OnRecvMessage() {
             }
 
             if (bytesRead <= 0) {
+                LOGE("Server is disconnected (ClientSocket: %d)", clientSocket_);
                 close(clientSocket_);
-                std::cout << "服务器断开连接" << std::endl;
                 return;
             }
 

@@ -1,19 +1,22 @@
 CXX = g++
-CXXFLAGS = -std=c++14 -Wall
+CXXFLAGS = -std=c++14 -Wall \
+	-D__FILENAME__=\"$(basename $(notdir $<))\"
 
 all: create_out_directory client server test_chat_message test_tcp_connect test_log
 
 create_out_directory:
 	mkdir -p out
 
-client: client.cpp tcp_client.o chat_message.o client_message_handler.o
+client: client.cpp tcp_client.o chat_message.o client_message_handler.o logger.o
 	$(CXX) $(CXXFLAGS) -o out/clinet \
 	client.cpp \
 	out/chat_message.o \
 	out/tcp_client.o \
 	out/client_message_handler.o \
+	out/logger.o \
 	-Iconnect \
-	-Icommon
+	-Icommon \
+	-Imessage_handling
 
 server: server.cpp tcp_server.o chat_message.o server_message_handler.o logger.o
 	$(CXX) $(CXXFLAGS) -o out/server \
@@ -71,6 +74,7 @@ tcp_client.o: connect/tcp_client.cpp
 	$(CXX) $(CXXFLAGS) \
 	-Icommon \
 	-Imessage_handling \
+	-Iutils \
 	-c connect/tcp_client.cpp -o out/tcp_client.o -pthread
 
 chat_message.o: common/chat_message.cpp
@@ -88,6 +92,7 @@ client_message_handler.o: message_handling/client_message_handler.cpp
 	$(CXX) $(CXXFLAGS) \
 	-Icommon \
 	-Imessage_handling \
+	-Iutils \
 	-c message_handling/client_message_handler.cpp \
 	-o out/client_message_handler.o
 

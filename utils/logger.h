@@ -10,6 +10,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <ctime>
+#include <mutex>
 
 enum class LogLevel {
     VERBOSE,
@@ -26,28 +27,31 @@ public:
     void SetLogLevel(LogLevel level);
 
     void Log(LogLevel level, const char* format, ...);
+
+    static std::string GetCurrentTimestamp();
 private:
     Logger();
 
     LogLevel logLevel = LogLevel::INFO;
     std::ostream* outputStream;
     std::ofstream logFile;
+    std::mutex logMutex;
     std::string logFileName = "chat.log";
 };
 
 #define LOG_LEVEL_STR(level) \
-    (level == LogLevel::VERBOSE ? "VERBOSE" : \
-     level == LogLevel::DEBUG ? "DEBUG" : \
-     level == LogLevel::WARNING ? "WARNING" : \
-     level == LogLevel::INFO ? "INFO" : \
-     level == LogLevel::ERROR ? "ERROR" : "UNKNOWN")
+    (level == LogLevel::VERBOSE ? "V" : \
+     level == LogLevel::DEBUG ? "D" : \
+     level == LogLevel::WARNING ? "W" : \
+     level == LogLevel::INFO ? "I" : \
+     level == LogLevel::ERROR ? "E" : "U")
 
 #define GETTID() syscall(SYS_gettid)
 #define GETPID() getpid()
 #define LOG(level, format, ...) \
-    Logger::GetInstance().Log(level, "%s %d %d [%s] %s:%d " \
-    format, __TIME__, GETPID(), GETTID(), LOG_LEVEL_STR(level), \
-    __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    Logger::GetInstance().Log(level, "%s %6d %6d [%s] %s:%d %s() " \
+    format, Logger::GetCurrentTimestamp().c_str(), GETPID(), GETTID(), LOG_LEVEL_STR(level), \
+    __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 
 #define LOGV(format, ...) LOG(LogLevel::VERBOSE, format, ##__VA_ARGS__)

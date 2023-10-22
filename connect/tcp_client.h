@@ -16,7 +16,6 @@ public:
     TCPClient(const char* serverIP, int serverPort);
     ~TCPClient();
     bool Initialize();
-    void SendMessage();
     int SendMessage(std::string message);
 
 private:

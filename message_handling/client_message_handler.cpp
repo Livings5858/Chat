@@ -1,10 +1,12 @@
 #include "client_message_handler.h"
+#include "logger.h"
 
 void ClientMessageHandler::HandleCommandResponse(const ChatMessage& msg) {
     // 实现处理命令回复消息的逻辑
 }
 
 void ClientMessageHandler::HandleTextResponse(const ChatMessage& msg) {
+    LOGD("Received text message from %s ,message: %s", msg.from.c_str(), msg.message.c_str());
     std::cout << "Received text message from " << msg.from << ": " << msg.message << std::endl;
     // 实现处理文本回复消息的逻辑
 }
@@ -19,17 +21,19 @@ void ClientMessageHandler::HandleFileDataResponse(const ChatMessage& msg) {
 
 void ClientMessageHandler::HandleLoginResponse(const ChatMessage& msg) {
     if (msg.message == "OK") {
-        std::cout << "登录成功" << std::endl;
+        LOGD("Login sucessful %s", msg.to.c_str());
+        std::cout << "Login sucessful" << std::endl;
     } else {
-        std::cout << "登录失败: " << msg.message << std::endl;
+        LOGE("Login failed %s, %s", msg.to.c_str(), msg.message.c_str());
+        std::cout << "Login failed: " << msg.message << std::endl;
     }
 }
 
 void ClientMessageHandler::HandleLogoutResponse(const ChatMessage& msg) {
     if (msg.message == "OK") {
-        std::cout << "Logout成功" << std::endl;
+        LOGD("Logout sucessful %s", msg.to.c_str());
     } else {
-        std::cout << "Logout失败: " << msg.message << std::endl;
+        LOGE("Logout failed %s, %s", msg.to.c_str(), msg.message.c_str());
     }
 }
 
@@ -75,7 +79,7 @@ void ClientMessageHandler::HandleMessage(const ChatMessage& msg) {
             HandleForgotPasswordResponse(msg);
             break;
         default:
-            std::cout << "Received an unsupported message type." << std::endl;
+            LOGE("Received an unsupported message type");
             break;
     }
 }
