@@ -129,23 +129,55 @@ void TCPServer::HandleNewConnection() {
 void TCPServer::HandleClientData(int clientSocket) {
     size_t message_len = 0;
     std::string message;
-
     // 接收消息大小
     int bytesRead = recv(clientSocket, &message_len, sizeof(message_len), 0);
-    if (bytesRead > 0) {
-        char* buffer = new char[message_len + 1];
-        bytesRead = recv(clientSocket, buffer, message_len, 0);
-        buffer[message_len] = '\0';
-        message = buffer;
-        delete buffer;
-    }
-
-    if (bytesRead <= 0) {
+    if (bytesRead == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            return;
+        } else if (errno == EINTR) {
+            return;
+        }
+        LOGE("Recv message length failed (ClientSocket: %d) %s", clientSocket, strerror(errno));
         epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
         close(clientSocket);
-        LOGI("Client [%d] disconnected.", clientSocket);
+        return;
+    } else if (bytesRead == 0) {
+        LOGI("Client is disconnected (ClientSocket: %d)  %s", clientSocket, strerror(errno));
+        epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
+        close(clientSocket);
         return;
     }
+
+    // 读取消息内容
+    char* buffer = new char[message_len + 1];
+    bytesRead = recv(clientSocket, buffer, message_len, 0);
+
+    if (bytesRead == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            delete[] buffer;
+            return;
+        } else if (errno == EINTR) {
+            delete[] buffer;
+            return;
+        }
+        LOGE("recv message failed (ClientSocket: %d) %s", clientSocket, strerror(errno));
+        epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
+        delete[] buffer;
+        close(clientSocket);
+        return;
+    } else if (bytesRead == 0) {
+        LOGI("Client is disconnected (ClientSocket: %d)  %s", clientSocket, strerror(errno));
+        epoll_ctl(epollFd_, EPOLL_CTL_DEL, clientSocket, NULL);
+        delete[] buffer;
+        close(clientSocket);
+        return;
+    }
+
+    buffer[message_len] = '\0';
+    message = buffer;
+    delete[] buffer;
 
     if (recvCallback_) {
         recvCallback_(clientSocket, message);

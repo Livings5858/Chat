@@ -5,6 +5,19 @@
 #include "logger.h"
 
 std::map<std::string, int> ServerMessageHandler::onlineMap_;
+std::map<std::string, std::string> ServerMessageHandler::userMap_;
+
+ServerMessageHandler::ServerMessageHandler() {
+    std::string username = "test";
+    std::string password = "password";
+    for (int i = 0; i < 1000; i++) {
+        userMap_[username + std::to_string(i)] = password;
+    }
+}
+
+ServerMessageHandler::~ServerMessageHandler() {
+
+}
 
 void ServerMessageHandler::HandleCommandMessage(int clientSocket, const ChatMessage& msg) {
 
@@ -40,17 +53,9 @@ void ServerMessageHandler::HandleLoginMessage(int clientSocket, const ChatMessag
         .to = msg.from,
     };
 
-    // Generate Fake User List
-    std::map<std::string, std::string> usermap;
-    std::string username = "test";
-    std::string password = "password";
-    for (int i = 0; i < 10; i++) {
-        usermap[username + std::to_string(i)] = password;
-    }
-
     bool loginOK = false;
-    auto it = usermap.find(msg.from);
-    if (it != usermap.end()) {
+    auto it = userMap_.find(msg.from);
+    if (it != userMap_.end()) {
         if (it->second == msg.message) {
             LOGD("Login sucessful %s (ClientSocket: %d)", msg.from.c_str(), clientSocket);
             loginOK = true;

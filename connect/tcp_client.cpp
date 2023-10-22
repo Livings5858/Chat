@@ -73,11 +73,11 @@ int TCPClient::SendMessage(std::string message) {
         return 0;
     }
     if (send(clientSocket_, &message_len, sizeof(message_len), 0) == -1) {
-        LOGE("Send message length failed (ClientSocket: %d)", clientSocket_);
+        LOGE("Send message length failed (ClientSocket: %d). %s", clientSocket_, strerror(errno));
         return errno;
     }
     if (send(clientSocket_, message.c_str(), message.length(), 0) == -1) {
-        LOGE("Send message content failed (ClientSocket: %d)", clientSocket_);
+        LOGE("Send message content failed (ClientSocket: %d). %s", clientSocket_, strerror(errno));
         return errno;
     }
 
@@ -89,27 +89,52 @@ void TCPClient::OnRecvMessage() {
     while (!stopRequested_.load()) {
         size_t message_len = 0;
         std::string message;
-        try {
-            // 接收消息大小
-            int bytesRead = recv(clientSocket_, &message_len, sizeof(message_len), 0);
-            if (bytesRead > 0) {
-                char* buffer = new char[message_len + 1];
-                bytesRead = recv(clientSocket_, buffer, message_len, 0);
-                buffer[message_len] = '\0';
-                message = buffer;
-                delete buffer;
+        // 接收消息大小
+        int bytesRead = recv(clientSocket_, &message_len, sizeof(message_len), 0);
+        if (bytesRead == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            } else if (errno == EINTR) {
+                continue;
             }
+            LOGE("Recv message length failed (ClientSocket: %d) %s", clientSocket_, strerror(errno));
+            close(clientSocket_);
+            return;
+        } else if (bytesRead == 0) {
+            LOGI("Server is disconnected (ClientSocket: %d) %s", clientSocket_, strerror(errno));
+            close(clientSocket_);
+            return;
+        }
 
-            if (bytesRead <= 0) {
-                LOGE("Server is disconnected (ClientSocket: %d)", clientSocket_);
-                close(clientSocket_);
-                return;
+        // 读取消息内容
+        char* buffer = new char[message_len + 1];
+        bytesRead = recv(clientSocket_, buffer, message_len, 0);
+
+        if (bytesRead == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                delete[] buffer;
+                continue;
+            } else if (errno == EINTR) {
+                delete[] buffer;
+                continue;
             }
+            LOGE("recv message failed (ClientSocket: %d) %s", clientSocket_, strerror(errno));
+            delete[] buffer;
+            close(clientSocket_);
+            return;
+        } else if (bytesRead == 0) {
+            LOGI("Server is disconnected (ClientSocket: %d)  %s", clientSocket_, strerror(errno));
+            delete[] buffer;
+            close(clientSocket_);
+            return;
+        }
 
-            clientMessageHandler.HandleMessage(DeserializeChatMessage(message));
-        }
-        catch(const std::exception& e) {
-            std::cerr << e.what() << '\n';
-        }
+        buffer[message_len] = '\0';
+        message = buffer;
+        delete[] buffer;
+
+        clientMessageHandler.HandleMessage(DeserializeChatMessage(message));
     }
 }
